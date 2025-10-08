@@ -1,0 +1,70 @@
+Imports System.Data.SqlClient
+
+Public Class frmThongKe
+    ' Kết nối SQL Server — đổi tên máy chủ nếu cần
+    Dim conn As New SqlConnection("Data Source=.\SQLEXPRESS;Initial Catalog=QLSV;Integrated Security=True")
+
+    ' Khi form mở
+    Private Sub frmThongKe_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Try
+            conn.Open()
+            Dim cmd As New SqlCommand("SELECT COUNT(*) FROM ThongTinSinhVien", conn)
+            Dim tong As Integer = Convert.ToInt32(cmd.ExecuteScalar())
+            lblTongSV.Text = "Tổng số sinh viên: " & tong.ToString()
+        Catch ex As Exception
+            MessageBox.Show("Không thể tải dữ liệu. Lỗi: " & ex.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            conn.Close()
+        End Try
+    End Sub
+
+    ' Nút thống kê theo lớp
+    Private Sub btnThongKeLop_Click(sender As Object, e As EventArgs) Handles btnThongKeLop.Click
+        Try
+            conn.Open()
+            Dim query As String =
+                "SELECT LopHoc.TenLop AS [Tên lớp], COUNT(*) AS [Số lượng SV]
+                 FROM ThongTinSinhVien 
+                 INNER JOIN LopHoc ON ThongTinSinhVien.MaLop = LopHoc.MaLop
+                 GROUP BY LopHoc.TenLop"
+            Dim da As New SqlDataAdapter(query, conn)
+            Dim dt As New DataTable()
+            da.Fill(dt)
+            dgvThongKe.DataSource = dt
+        Catch ex As Exception
+            MessageBox.Show("Lỗi khi thống kê theo lớp: " & ex.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            conn.Close()
+        End Try
+    End Sub
+
+    ' Nút thống kê theo giới tính
+    Private Sub btnThongKeGioiTinh_Click(sender As Object, e As EventArgs) Handles btnThongKeGioiTinh.Click
+        Try
+            conn.Open()
+            Dim query As String =
+                "SELECT GioiTinh AS [Giới tính], COUNT(*) AS [Số lượng SV]
+                 FROM ThongTinSinhVien
+                 GROUP BY GioiTinh"
+            Dim da As New SqlDataAdapter(query, conn)
+            Dim dt As New DataTable()
+            da.Fill(dt)
+            dgvThongKe.DataSource = dt
+        Catch ex As Exception
+            MessageBox.Show("Lỗi khi thống kê theo giới tính: " & ex.Message, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            conn.Close()
+        End Try
+    End Sub
+
+    Private Sub lblTongSV_Click(sender As Object, e As EventArgs) Handles lblTongSV.Click
+
+    End Sub
+
+    Private Sub dgvThongKe_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvThongKe.CellContentClick
+
+    End Sub
+End Class
+
+
+
