@@ -1,0 +1,351 @@
+Imports System.Data.SqlClient
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement
+
+Public Class frmDanhsach
+    ' Tạo chuỗi kết nôi
+    Dim connectionString As String = "Data Source=ADMIN-PC\SQLEXPRESS;Initial Catalog=QLSV;Integrated Security=True"
+    Dim connection As New SqlConnection(connectionString)
+    ' Phương thức làm mới DataGridView
+    Private Sub Update_dgvTtSv()
+        connection.Open()
+        ' Làm mới dữ liệu trên DataGridView để hiển thị dữ liệu mới
+        dgvTtSv.DataSource = Nothing
+        dgvTtSv.Rows.Clear()
+        ' Thực hiện truy vấn SQL để lấy dữ liệu mới từ cơ sở dữ liệu
+        Dim query As String = "SELECT * FROM ThongTinSinhVien"
+        Using connection As New SqlConnection(connectionString)
+            Using command As New SqlCommand(query, connection)
+                Using adapter As New SqlDataAdapter(command)
+                    Dim dataTable As New DataTable()
+                    adapter.Fill(dataTable)
+                    dgvTtSv.DataSource = dataTable
+                End Using
+            End Using
+        End Using
+        connection.Close()
+    End Sub
+    Private Sub Update_dgvLop()
+        connection.Open()
+        ' Làm mới dữ liệu trên DataGridView để hiển thị dữ liệu mới
+        dgvLop.DataSource = Nothing
+        dgvLop.Rows.Clear()
+        ' Thực hiện truy vấn SQL để lấy dữ liệu mới từ cơ sở dữ liệu
+        Dim query As String = "select [dbo].[LopHoc].MaLop, [dbo].[LopHoc].TenLop, [dbo].[LopHoc].MaKhoa, [dbo].[Khoa].TenKhoa
+                               from [dbo].[LopHoc]
+                               inner join [dbo].[Khoa] on [dbo].[LopHoc].MaKhoa = [dbo].[Khoa].MaKhoa"
+        Using connection As New SqlConnection(connectionString)
+            Using command As New SqlCommand(query, connection)
+                Using adapter As New SqlDataAdapter(command)
+                    Dim dataTable As New DataTable()
+                    adapter.Fill(dataTable)
+                    dgvLop.DataSource = dataTable
+                End Using
+            End Using
+        End Using
+        connection.Close()
+    End Sub
+    Private Sub frmDanhsach_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Update_dgvTtSv()
+        Update_dgvLop()
+    End Sub
+    ' Hiển thị dữ liệu của từng trường lên từng textbox
+    Private Sub dgvTtSv_SelectionChanged(sender As Object, e As EventArgs) Handles dgvTtSv.SelectionChanged
+        If dgvTtSv.SelectedRows.Count > 0 Then
+            ' Lấy bản ghi đã chọn
+            Dim selectedRow As DataGridViewRow = dgvTtSv.SelectedRows(0)
+            ' Lấy giá trị từng trường và gán cho từng TextBox tương ứng
+            txtHoten.Text = selectedRow.Cells("HoTen").Value.ToString()
+            txtGioitinh.Text = selectedRow.Cells("GioiTinh").Value.ToString()
+            ' Ép kiểu sang DateTime
+            Dim ngaySinhValue As Object = selectedRow.Cells("NgaySinh").Value
+            dtpNgaysinh.Value = DirectCast(ngaySinhValue, DateTime)
+            txtDiachi.Text = selectedRow.Cells("DiaChi").Value.ToString()
+            txtMalop.Text = selectedRow.Cells("MaLop").Value.ToString()
+            txtGPA.Text = selectedRow.Cells("GPA").Value.ToString()
+        End If
+    End Sub
+
+    '  nút Thêm
+    Private Sub btnThem_Click(sender As Object, e As EventArgs) Handles btnThem.Click
+        ' Kiểm tra các ô bắt buộc không được bỏ trống
+        If String.IsNullOrWhiteSpace(txtHoten.Text) OrElse
+       String.IsNullOrWhiteSpace(txtGioitinh.Text) OrElse
+       String.IsNullOrWhiteSpace(txtDiachi.Text) OrElse
+       String.IsNullOrWhiteSpace(txtMalop.Text) OrElse
+       String.IsNullOrWhiteSpace(txtGPA.Text) Then
+            MessageBox.Show("Vui lòng nhập đầy đủ thông tin.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Exit Sub
+        End If
+
+        ' Kiểm tra và ép kiểu GPA
+        Dim gpa As Single
+        If Not Single.TryParse(txtGPA.Text, gpa) Then
+            MessageBox.Show("GPA không hợp lệ. Vui lòng nhập số.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Exit Sub
+        End If
+
+        ' Chuẩn bị câu truy vấn và thêm dữ liệu
+        Dim query As String = "INSERT INTO ThongTinSinhVien (HoTen, GioiTinh, NgaySinh, DiaChi, MaLop, GPA) " &
+                          "VALUES (@HoTen, @GioiTinh, @NgaySinh, @DiaChi, @MaLop, @GPA)"
+
+        Try
+            Using connection As New SqlConnection(connectionString)
+                Using command As New SqlCommand(query, connection)
+                    command.Parameters.AddWithValue("@HoTen", txtHoten.Text)
+                    command.Parameters.AddWithValue("@GioiTinh", txtGioitinh.Text)
+                    command.Parameters.AddWithValue("@NgaySinh", dtpNgaysinh.Value)
+                    command.Parameters.AddWithValue("@DiaChi", txtDiachi.Text)
+                    command.Parameters.AddWithValue("@MaLop", txtMalop.Text)
+                    command.Parameters.AddWithValue("@GPA", gpa)
+
+                    connection.Open()
+                    Dim result As Integer = command.ExecuteNonQuery()
+                    If result > 0 Then
+                        MessageBox.Show("Thêm sinh viên thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        Update_dgvTtSv() ' Cập nhật lại DataGridView
+                    Else
+                        MessageBox.Show("Không thể thêm sinh viên.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    End If
+                End Using
+            End Using
+        Catch ex As Exception
+            MessageBox.Show("Lỗi khi thêm sinh viên: " & ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+
+    '  nút Thoát
+    Private Sub btnThoat_Click(sender As Object, e As EventArgs) Handles btnThoat.Click
+        Dim result As DialogResult = MessageBox.Show("Bạn có chắc chắn muốn thoát chương trình?", "Thông báo", MessageBoxButtons.YesNo)
+        If result = DialogResult.Yes Then
+            Application.Exit()
+        Else
+            Me.Focus()
+        End If
+    End Sub
+    ' nút Sửa
+    Private Sub btnSua_Click(sender As Object, e As EventArgs) Handles btnSua.Click
+        connection.Open()
+        Dim query As String = "UPDATE ThongTinSinhVien SET HoTen = @HoTen, GioiTinh = @GioiTinh, NgaySinh = @NgaySinh, DiaChi = @DiaChi, MaLop = @MaLop, GPA = @GPA WHERE MaSinhVien = @MaSinhVien"
+        Using command As New SqlCommand(query, connection)
+            ' Thay thế các tham số trong truy vấn bằng giá trị thực tế
+            command.Parameters.AddWithValue("@HoTen", txtHoten.Text)
+            command.Parameters.AddWithValue("@GioiTinh", txtGioitinh.Text)
+            command.Parameters.AddWithValue("@NgaySinh", dtpNgaysinh.Value)
+            command.Parameters.AddWithValue("@DiaChi", txtDiachi.Text)
+            command.Parameters.AddWithValue("@MaLop", txtMalop.Text)
+            ' Ép kiểu
+            Dim gpaText As String = txtGPA.Text
+            ' Khai báo biến float để lưu giá trị GPA
+            Dim gpa As Single
+            Single.TryParse(gpaText, gpa)
+            command.Parameters.AddWithValue("@GPA", gpa)
+            Dim selectedRow As DataGridViewRow = dgvTtSv.SelectedRows(0)
+            Dim MaSinhVien As String = selectedRow.Cells("MaSinhVien").Value.ToString()
+            command.Parameters.AddWithValue("@MaSinhVien", MaSinhVien)
+            ' Thực thi truy vấn UPDATE
+            Dim result As Integer = command.ExecuteNonQuery()
+            connection.Close()
+            ' Kiểm tra kết quả
+            If result > 0 Then
+                MessageBox.Show("Sửa thông tin thành công.", "Thông báo")
+                Update_dgvTtSv()
+            Else
+                MessageBox.Show("Sửa thông tin thất bại.", "Thông báo")
+            End If
+        End Using
+        connection.Close()
+    End Sub
+    '  nút Xóa
+    Private Sub btnXoa_Click(sender As Object, e As EventArgs) Handles btnXoa.Click
+        If dgvTtSv.SelectedRows.Count = 0 Then
+            MessageBox.Show("Vui lòng chọn một sinh viên để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim confirm = MessageBox.Show("Bạn có chắc muốn xóa sinh viên này?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+        If confirm <> DialogResult.Yes Then Return
+
+        Try
+            Dim selectedRow As DataGridViewRow = dgvTtSv.SelectedRows(0)
+            Dim MaSinhVien As String = selectedRow.Cells("MaSinhVien").Value.ToString()
+
+            Dim query As String = "DELETE FROM ThongTinSinhVien WHERE MaSinhVien = @MaSinhVien"
+            Using conn As New SqlConnection(connectionString)
+                Using cmd As New SqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@MaSinhVien", MaSinhVien)
+                    conn.Open()
+                    Dim result As Integer = cmd.ExecuteNonQuery()
+                    If result > 0 Then
+                        MessageBox.Show("Xóa sinh viên thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        Update_dgvTtSv()
+                    Else
+                        MessageBox.Show("Xóa sinh viên thất bại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    End If
+                End Using
+            End Using
+
+        Catch ex As Exception
+            MessageBox.Show("Đã xảy ra lỗi khi xóa: " & ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ' Hiển thị dữ liệu của từng trường lên từng textbox
+    Private Sub dgvLop_SelectionChanged(sender As Object, e As EventArgs) Handles dgvLop.SelectionChanged
+        If dgvLop.SelectedRows.Count > 0 Then
+            ' Lấy bản ghi đã chọn
+            Dim selectedRow As DataGridViewRow = dgvLop.SelectedRows(0)
+            ' Lấy giá trị từng trường và gán cho từng TextBox tương ứng
+            txtMaLop2.Text = selectedRow.Cells("MaLop").Value.ToString()
+            txtTenLop.Text = selectedRow.Cells("TenLop").Value.ToString()
+            txtMaKhoa.Text = selectedRow.Cells("MaKhoa").Value.ToString()
+            txtTenKhoa.Text = selectedRow.Cells("TenKhoa").Value.ToString()
+        End If
+    End Sub
+    ' Sự kiện nút Thêm2
+    Private Sub btnThem2_Click(sender As Object, e As EventArgs) Handles btnThem2.Click
+        connection.Open()
+        ' Kiểm tra đã tồn tại mã khoa chưa
+        Dim checkQuery As String = "SELECT COUNT(*) FROM Khoa WHERE MaKhoa = @MaKhoa"
+        Dim query1 As String = "INSERT INTO Khoa (MaKhoa, TenKhoa) " &
+                              "VALUES (@MaKhoa, @TenKhoa)"
+        Dim query2 As String = "INSERT INTO LopHoc (MaLop, TenLop, MaKhoa) " &
+                              "VALUES (@MaLop, @TenLop, @MaKhoa)"
+        Using checkCommand As New SqlCommand(checkQuery, connection)
+            checkCommand.Parameters.AddWithValue("@MaKhoa", txtMaKhoa.Text)
+            Dim existingKhoaCount As Integer = CInt(checkCommand.ExecuteScalar())
+            ' Nếu tồn tại rồi thì chỉ thêm dữ liệu vào bảng LopHoc
+            If existingKhoaCount > 0 Then
+                Using command2 As New SqlCommand(query2, connection)
+                    command2.Parameters.AddWithValue("@MaLop", txtMaLop2.Text)
+                    command2.Parameters.AddWithValue("@TenLop", txtTenLop.Text)
+                    command2.Parameters.AddWithValue("@MaKHoa", txtMaKhoa.Text)
+                    Dim result2 As Integer = command2.ExecuteNonQuery()
+                    connection.Close()
+                    ' Kiểm tra kết quả
+                    If result2 > 0 Then
+                        MessageBox.Show("Thêm lớp thành công.", "Thông báo")
+                        Update_dgvLop()
+                    Else
+                        MessageBox.Show("Thêm lớp thất bại.", "Thông báo")
+                    End If
+                End Using
+                ' Nếu chưa thì thêm vào cả hai bảng Khoa và lớp học
+            Else
+                Using command1 As New SqlCommand(query1, connection)
+                    command1.Parameters.AddWithValue("@MaKhoa", txtMaKhoa.Text)
+                    command1.Parameters.AddWithValue("@TenKhoa", txtTenKhoa.Text)
+                    Dim result1 As Integer = command1.ExecuteNonQuery()
+                    Using command2 As New SqlCommand(query2, connection)
+                        command2.Parameters.AddWithValue("@MaLop", txtMaLop2.Text)
+                        command2.Parameters.AddWithValue("@TenLop", txtTenLop.Text)
+                        command2.Parameters.AddWithValue("@MaKHoa", txtMaKhoa.Text)
+                        Dim result2 As Integer = command2.ExecuteNonQuery()
+                        connection.Close()
+                        ' Kiểm tra kết quả
+                        If result1 > 0 And result2 > 0 Then
+                            MessageBox.Show("Thêm lớp thành công.", "Thông báo")
+                            Update_dgvLop()
+                        Else
+                            MessageBox.Show("Thêm lớp thất bại.", "Thông báo")
+                        End If
+                    End Using
+                End Using
+            End If
+        End Using
+        connection.Close()
+    End Sub
+    ' Sự kiện nút Sửa2
+    Private Sub btnSua2_Click(sender As Object, e As EventArgs) Handles btnSua2.Click
+        If dgvLop.SelectedRows.Count = 0 Then
+            MessageBox.Show("Vui lòng chọn một lớp để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ' Kiểm tra đầu vào
+        If String.IsNullOrWhiteSpace(txtMaLop2.Text) OrElse
+       String.IsNullOrWhiteSpace(txtTenLop.Text) OrElse
+       String.IsNullOrWhiteSpace(txtMaKhoa.Text) Then
+            MessageBox.Show("Vui lòng nhập đầy đủ thông tin lớp học.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim selectedRow As DataGridViewRow = dgvLop.SelectedRows(0)
+        Dim oldMaLop As String = selectedRow.Cells("MaLop").Value.ToString()
+
+        Dim query As String = "UPDATE LopHoc SET MaLop = @MaLop, TenLop = @TenLop, MaKhoa = @MaKhoa WHERE MaLop = @OldMaLop"
+
+        Try
+            Using conn As New SqlConnection(connectionString)
+                Using cmd As New SqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@MaLop", txtMaLop2.Text)
+                    cmd.Parameters.AddWithValue("@TenLop", txtTenLop.Text)
+                    cmd.Parameters.AddWithValue("@MaKhoa", txtMaKhoa.Text)
+                    cmd.Parameters.AddWithValue("@OldMaLop", oldMaLop)
+
+                    conn.Open()
+                    Dim result As Integer = cmd.ExecuteNonQuery()
+                    If result > 0 Then
+                        MessageBox.Show("Sửa lớp học thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        Update_dgvLop()
+                    Else
+                        MessageBox.Show("Không tìm thấy lớp để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    End If
+                End Using
+            End Using
+        Catch ex As Exception
+            MessageBox.Show("Lỗi khi sửa lớp học: " & ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    ' Sự kiện nút Xóa2
+    Private Sub btnXoa2_Click(sender As Object, e As EventArgs) Handles btnXoa2.Click
+        connection.Open()
+        Dim query As String = "DELETE FROM LopHoc WHERE MaLop = @MaLop"
+        Using command As New SqlCommand(query, connection)
+            Dim selectedRow As DataGridViewRow = dgvLop.SelectedRows(0)
+            Dim MaLop As String = selectedRow.Cells("MaLop").Value.ToString()
+            command.Parameters.AddWithValue("@MaLop", MaLop)
+            ' Thực thi truy vấn DELETE
+            Dim result As Integer = command.ExecuteNonQuery()
+            connection.Close()
+            ' Kiểm tra kết quả
+            If result > 0 Then
+                MessageBox.Show("Xóa thành công.", "Thông báo")
+                Update_dgvLop()
+            Else
+                MessageBox.Show("Xóa thất bại.", "Thông báo")
+            End If
+        End Using
+        connection.Close()
+    End Sub
+
+    Private Sub btnThoat2_Click(sender As Object, e As EventArgs) Handles btnThoat2.Click
+        Dim result As DialogResult = MessageBox.Show("Bạn có chắc chắn muốn thoát chương trình?", "Thông báo", MessageBoxButtons.YesNo)
+        If result = DialogResult.Yes Then
+            Application.Exit()
+        Else
+            Me.Focus()
+        End If
+    End Sub
+
+    Private Sub dgvTtSv_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgvTtSv.CellContentClick
+        Dim query As String = "SELECT * FROM ThongTinSinhVien"
+        Dim connection As New SqlConnection(connectionString)
+        Using command As New SqlCommand(query, connection)
+            Using adapter As New SqlDataAdapter(command)
+                Dim dataTable As New DataTable()
+                adapter.Fill(dataTable)
+                dgvTtSv.Visible = True
+                dgvTtSv.DataSource = dataTable
+            End Using
+        End Using
+    End Sub
+
+    Private Sub btnThongKe_Click(sender As Object, e As EventArgs) Handles btnThongKe.Click
+        Dim f As New frmThongKe()   ' Tạo form thống kê
+        f.ShowDialog()              ' Mở form thống kê
+
+    End Sub
+
+End Class
