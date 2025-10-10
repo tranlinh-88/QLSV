@@ -1,7 +1,7 @@
 # Form đăng nhập
 Public Class frmDangnhap
     Private Sub bntDangnhap_Click(sender As Object, e As EventArgs) Handles bntDangnhap.Click
-        If txtTaikhoan.Text = "admin" And txtMatkhau.Text = "admin" Then
+        If txtTaikhoan.Text = "admin" And txtMatkhau.Text = "linh1" Then
             MessageBox.Show("Đăng nhập thành công", "Thông báo")
             Dim form2 As New frmDanhsach()
             form2.ShowDialog()
